@@ -1,10 +1,5 @@
-from flask import Flask, request, jsonify
-import yfinance as yf
-
-app = Flask(__name__)
-
-@app.route('/fetch-news-links', methods=['POST'])
-def fetch_news_links():
+@app.route('/calculate-indicators', methods=['POST'])
+def calculate_indicators():
     data = request.json
     symbols = data.get("symbols", [])
     
@@ -13,55 +8,52 @@ def fetch_news_links():
         try:
             clean_symbol = symbol.split(":")[-1].strip()
             ticker = yf.Ticker(clean_symbol)
+            df = ticker.history(period="60d")
             
-            news_links = []
-            try:
-                # รองรับทั้งฟังก์ชัน .news ปกติและ .get_news() ใน yfinance หลายเวอร์ชัน
-                raw_news = []
-                if hasattr(ticker, "get_news"):
-                    raw_news = ticker.get_news()
-                elif hasattr(ticker, "news"):
-                    raw_news = ticker.news
+            if df.empty or len(df) < 15:
+                results[symbol] = {"rsi": "-", "stoch": "-", "news": "-"}
+                continue
                 
-                if raw_news:
+            close_prices = df['Close']
+            high_prices = df['High']
+            low_prices = df['Low']
+            
+            rsi_series = ta.momentum.rsi(close_prices, window=14)
+            rsi_val = rsi_series.iloc[-1]
+            current_rsi = round(float(rsi_val), 2) if not pd.isna(rsi_val) else "-"
+            
+            stoch_series = ta.momentum.stoch(high_prices, low_prices, close_prices, window=14, smooth_window=3)
+            stoch_val = stoch_series.iloc[-1]
+            current_stoch = round(float(stoch_val), 2) if not pd.isna(stoch_val) else "-"
+            
+            news_formatted = "-"
+            try:
+                raw_news = ticker.news
+                if raw_news and model:
+                    news_items = []
                     count = 0
                     for item in raw_news:
                         if count >= 3:
                             break
-                        
-                        # ดึงข้อมูลจากโครงสร้างที่อาจจะอยู่ใน content หรือ level ปกติ
-                        title = ""
-                        link = ""
-                        
-                        if isinstance(item, dict):
-                            # รูปแบบมาตรฐานทั่วไป
-                            title = item.get('title', '')
-                            link = item.get('link', '')
-                            
-                            # รูปแบบโครงสร้างใหม่บางเวอร์ชัน (nested under content)
-                            if not title and 'content' in item:
-                                content = item.get('content', {})
-                                title = content.get('title', '')
-                                if 'clickThroughUrl' in content and content['clickThroughUrl']:
-                                    link = content['clickThroughUrl'].get('url', '')
-                            
-                            # ถ้ายังไม่มี link ให้ลองหาฟิลด์สำรอง
-                            if not link and 'providerPublishTime' in item:
-                                pass # ข้ามถ้าไม่มีลิงก์จริง
-                                
+                        title = item.get('title', '')
+                        link = item.get('link', '')
                         if title and link:
-                            news_links.append(f"• {title}\n  🔗 {link}")
+                            news_items.append(f"- {title} | Link: {link}")
                             count += 1
-            except Exception as e:
-                print(f"Error fetching news for {symbol}: {str(e)}")
+                    
+                    if news_items:
+                        prompt_text = "Translate the following stock news titles into natural Thai. Keep the exact link provided for each item. Format as bullet points with the Thai translated title followed by the link in parentheses:\n" + "\n".join(news_items)
+                        response = model.generate_content(prompt_text)
+                        news_formatted = response.text.strip()
+            except Exception:
+                pass
                 
             results[symbol] = {
-                "news": "\n\n".join(news_links) if news_links else "• ไม่พบข่าวสารล่าสุดหรือลิงก์อ้างอิงจาก Yahoo Finance ในขณะนี้"
+                "rsi": current_rsi,
+                "stoch": current_stoch,
+                "news": news_formatted
             }
         except Exception as e:
-            results[symbol] = {"news": "• เกิดข้อผิดพลาดในการเชื่อมต่อข้อมูลหุ้น"}
+            results[symbol] = {"rsi": "-", "stoch": "-", "news": "-"}
             
     return jsonify({"status": "success", "data": results})
-
-if __name__ == '__main__':
-    app.run(host='
