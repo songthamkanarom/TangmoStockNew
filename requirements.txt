@@ -3,3 +3,6 @@ yfinance
 pandas
 ta
 gunicorn
+requests
+beautifulsoup4
+deep-translator
