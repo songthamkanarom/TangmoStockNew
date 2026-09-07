@@ -6,7 +6,6 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# ตั้งค่า Gemini API จาก Environment Variable บน Render
 api_key = os.environ.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
@@ -29,7 +28,6 @@ def calculate_indicators():
             clean_symbol = symbol.split(":")[-1].strip()
             ticker = yf.Ticker(clean_symbol)
             
-            # ดึงข่าวสารล่าสุดและแปลเป็นไทยผ่าน Gemini (สูงสุด 3 ข่าว) โดยไม่คำนวณ RSI/Stoch ซ้ำซ้อน
             news_formatted = "-"
             try:
                 raw_news = ticker.news
@@ -42,20 +40,22 @@ def calculate_indicators():
                         title = item.get('title', '')
                         link = item.get('link', '')
                         if title and link:
-                            news_items.append(f"- {title} | Link: {link}")
+                            news_items.append(f"Title: {title}\nURL: {link}")
                             count += 1
                     
                     if news_items:
                         prompt = (
-                            f"Translate the following stock news titles into natural Thai. "
-                            f"Keep the exact link provided for each item. Format as bullet points "
-                            f"with the Thai translated title followed by the link in parentheses:\n\n" + 
-                            "\n".join(news_items)
+                            "Translate each stock news title into natural, professional Thai. "
+                            "Keep the exact URL provided for each item. "
+                            "Format your response strictly as 3 lines, where each line has the Thai translation "
+                            "followed by its URL in this exact format:\n"
+                            "[Thai Title] (URL)\n\n" + 
+                            "\n---\n".join(news_items)
                         )
                         response = model.generate_content(prompt)
                         news_formatted = response.text.strip()
-            except Exception:
-                pass
+            except Exception as e:
+                news_formatted = f"Error translating: {str(e)}"
                 
             results[symbol] = {
                 "news": news_formatted
