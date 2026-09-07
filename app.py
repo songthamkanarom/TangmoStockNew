@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
 import yfinance as yf
-import ta
 import pandas as pd
 import os
 import google.generativeai as genai
@@ -29,27 +28,8 @@ def calculate_indicators():
         try:
             clean_symbol = symbol.split(":")[-1].strip()
             ticker = yf.Ticker(clean_symbol)
-            df = ticker.history(period="60d")
             
-            if df.empty or len(df) < 15:
-                results[symbol] = {"rsi": "-", "stoch": "-", "news": "-"}
-                continue
-                
-            close_prices = df['Close']
-            high_prices = df['High']
-            low_prices = df['Low']
-            
-            # คำนวณ RSI (14)
-            rsi_series = ta.momentum.rsi(close_prices, window=14)
-            rsi_val = rsi_series.iloc[-1]
-            current_rsi = round(float(rsi_val), 2) if not pd.isna(rsi_val) else "-"
-            
-            # คำนวณ Stochastic %K (14, 3)
-            stoch_series = ta.momentum.stoch(high_prices, low_prices, close_prices, window=14, smooth_window=3)
-            stoch_val = stoch_series.iloc[-1]
-            current_stoch = round(float(stoch_val), 2) if not pd.isna(stoch_val) else "-"
-            
-            # ดึงข่าวสารล่าสุดและแปลเป็นไทยผ่าน Gemini
+            # ดึงข่าวสารล่าสุดและแปลเป็นไทยผ่าน Gemini (สูงสุด 3 ข่าว) โดยไม่คำนวณ RSI/Stoch ซ้ำซ้อน
             news_formatted = "-"
             try:
                 raw_news = ticker.news
@@ -78,12 +58,10 @@ def calculate_indicators():
                 pass
                 
             results[symbol] = {
-                "rsi": current_rsi,
-                "stoch": current_stoch,
                 "news": news_formatted
             }
         except Exception as e:
-            results[symbol] = {"rsi": "-", "stoch": "-", "news": "-"}
+            results[symbol] = {"news": "-"}
             
     return jsonify({"status": "success", "data": results})
 
