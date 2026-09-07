@@ -11,6 +11,7 @@ def fetch_news():
     results = {}
     for symbol in symbols:
         try:
+            # ตัด prefix เช่น NASDAQ:, NYSE: ออก เหลือแค่ชื่อย่อหลักส่งให้ yfinance
             clean_symbol = symbol.split(":")[-1].strip()
             ticker = yf.Ticker(clean_symbol)
             
@@ -29,10 +30,12 @@ def fetch_news():
                             
                         if title and link:
                             safe_title = str(title).replace('"', '').replace("'", "").strip()
+                            # จัดรูปแบบหัวข้อและลิงก์
                             news_list.append(f"• {safe_title}\n  ลิงก์ข่าว: {link}")
             except Exception:
                 pass
             
+            # หากไม่มีข่าวสด ให้ใช้ลิงก์สำรองหน้าหลักของ Yahoo Finance
             if not news_list:
                 fallback_link = f"https://finance.yahoo.com/quote/{clean_symbol}"
                 news_list.append(f"• ข้อมูลภาพรวมและสถิติของ {clean_symbol}\n  ลิงก์: {fallback_link}")
