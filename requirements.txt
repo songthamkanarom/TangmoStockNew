@@ -3,4 +3,4 @@ yfinance
 pandas
 ta
 gunicorn
-google-generativeai
+
