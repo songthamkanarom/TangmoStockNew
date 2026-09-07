@@ -17,8 +17,8 @@ if api_key:
 else:
     model = None
 
-@app.route('/calculate-indicators', methods=['POST'])
-def calculate_indicators():
+@app.route('/fetch-news', methods=['POST'])
+def fetch_news():
     data = request.json
     symbols = data.get("symbols", [])
     
