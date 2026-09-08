@@ -1,6 +1,8 @@
 Flask
-yfinance
-pandas
-ta
 gunicorn
 google-generativeai
+requests
+beautifulsoup4
+yfinance
+ta
+pandas
