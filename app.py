@@ -14,6 +14,30 @@ api_key = os.environ.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
+def get_available_model():
+    """ค้นหาและเลือกโมเดลที่ใช้งานได้จริงจาก API Key อัตโนมัติ"""
+    try:
+        models = genai.list_models()
+        valid_models = []
+        for m in models:
+            if 'generateContent' in m.supported_generation_methods:
+                valid_models.append(m.name)
+        
+        # ลำดับความสำคัญของโมเดลที่ต้องการเลือกใช้
+        preferred_keywords = ['flash', 'pro']
+        for kw in preferred_keywords:
+            for m_name in valid_models:
+                if kw in m_name.lower():
+                    return genai.GenerativeModel(m_name)
+                    
+        if valid_models:
+            return genai.GenerativeModel(valid_models[0])
+    except Exception as e:
+        print(f"Error finding models: {e}")
+    
+    # Fallback กรณีดึงรายชื่อไม่สำเร็จ
+    return genai.GenerativeModel('gemini-1.5-flash')
+
 # ==========================================
 # ฟังก์ชันที่ 1: คำนวณ RSI, Stoch และดึงลิงก์ข่าวภาษาอังกฤษ
 # ==========================================
@@ -112,8 +136,8 @@ def summarize_news():
     )
     
     try:
-        # ใช้ gemini-pro เพื่อให้ชัวร์ว่าไม่ติด 404
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        # ดึงโมเดลอัตโนมัติที่ไม่ติด Error 404
+        model = get_available_model()
         response = model.generate_content(prompt)
         summary = response.text.strip()
         return jsonify({"status": "success", "summary": summary})
