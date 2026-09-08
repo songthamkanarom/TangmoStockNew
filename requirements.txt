@@ -1,6 +1,6 @@
 Flask
 gunicorn
-google-generativeai
+google-generativeai>=0.8.0
 requests
 beautifulsoup4
 yfinance
