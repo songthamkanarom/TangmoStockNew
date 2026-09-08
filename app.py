@@ -113,7 +113,7 @@ def summarize_news():
     
     try:
         # ใช้ gemini-pro เพื่อให้ชัวร์ว่าไม่ติด 404
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
         summary = response.text.strip()
         return jsonify({"status": "success", "summary": summary})
