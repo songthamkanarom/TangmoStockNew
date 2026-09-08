@@ -137,7 +137,7 @@ def summarize_news():
     
     try:
         # ดึงโมเดลอัตโนมัติที่ไม่ติด Error 404
-        model = get_available_model()
+        model = genai.GenerativeModel('gemini-3.6-flash')
         response = model.generate_content(prompt)
         summary = response.text.strip()
         return jsonify({"status": "success", "summary": summary})
